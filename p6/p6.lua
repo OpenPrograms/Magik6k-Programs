@@ -23,7 +23,7 @@ local function deepcopy(orig)
 end
 
 do
-  _G._OSVERSION = "OpenOS 1.2(p6 kernel)"
+  _G._OSVERSION = "p6 core/1.0"
 
   
 
@@ -60,13 +60,15 @@ do
   status = function(...)
     local msg = ""
     for _,s in ipairs({...})do msg = msg.." "..tostring(s) end
-    if gpu and screen then
-      component.invoke(gpu, "set", 1, y, msg)
-      if y == h then
-        component.invoke(gpu, "copy", 1, 2, w, h - 1, 0, -1)
-        component.invoke(gpu, "fill", 1, h, w, 1, " ")
-      else
-        y = y + 1
+    for line in msg:gmatch("[^\n]+") do
+      if gpu and screen then
+        component.invoke(gpu, "set", 1, y, line)
+        if y == h then
+          component.invoke(gpu, "copy", 1, 2, w, h - 1, 0, -1)
+          component.invoke(gpu, "fill", 1, h, w, 1, " ")
+        else
+          y = y + 1
+        end
       end
     end
   end
@@ -113,6 +115,7 @@ local function sandbox()
     local sb = 
     {
         assert = assert,
+        --error = function(...)status("E:",...)status(debug.traceback())error(...)end,
         error = error,
         _G = nil,
         getmetatable = getmetatable,
@@ -249,7 +252,12 @@ local function sandbox()
             read = posix.read,
             write = posix.write,
             close = posix.close,
-            pipe = posix.pipe
+            pipe = posix.pipe,
+            signal = posix.signal,
+            ps = posix.ps,
+            setIPC = posix.setIPC,
+            getIPC = posix.getIPC,
+            callIPC = posix.callIPC
         },
         computer = deepcopy(computer),
         component = deepcopy(component),
@@ -257,7 +265,19 @@ local function sandbox()
         checkArg = checkArg
     }
     
-    sb.coroutine.resume = function(c,...)local r = {coroutine.resume(c,...)}return r[1],table.unpack(r,3) end
+    sb.coroutine.resume = function(c,...)
+        local r
+        local par = {...}
+        repeat
+            r = {coroutine.resume(c,table.unpack(par))}
+            if r[1] and r[2] then
+                par = {coroutine.yield(true, table.unpack(r,3))}
+            else
+                return r[1], r[1] and table.unpack(r,3) or r[2]
+            end
+        until not r[1] or not r[2]
+        return r[1], r[1] and table.unpack(r,3) or r[2] 
+    end
     sb.coroutine.yield = function(...)return coroutine.yield(false, ...) end
     sb.computer.pullSignal = function(...)return coroutine.yield(true ,...)end
     
@@ -272,11 +292,30 @@ function _K.panic()
     while true do computer.pullSignal() end
 end
 
+---------KERNEL MEMORY
 
 local kmem = {}
 
 kmem.fd = {}
+
+kmem.ipcCall = {}
+
 kmem.proc = {}
+kmem.processSignals = {}
+
+---------USER IPC(non standard!)
+
+function posix.setIPC(name, func)
+    kmem.ipcCall[name] = func
+end
+
+function posix.getIPC(name)
+    return kmem.ipcCall[name]
+end
+
+function posix.callIPC(name, ...)
+    return kmem.ipcCall[name](...)
+end
 
 ---------FILE CORE
 
@@ -374,13 +413,15 @@ function posix.pipe()
 end
 
 ---------PIPE END
+---------THREADING
 
 function posix.spawnInit(tfn)
     
     local process = {}
     process._ENV = sandbox()
-    process.rt = _K.coroutine.create(load(tfn,nil,nil,process._ENV))
-    
+    process.rt = coroutine.create(load(tfn,"=init",nil,process._ENV))
+    process.name = "[init]"
+    process.globalSignals = true
     local pid = #kmem.proc+1
     kmem.proc[pid] = process
     
@@ -388,19 +429,42 @@ function posix.spawnInit(tfn)
     
 end
 
-function posix.spawn(tfn)
+function posix.spawn(tfn, name, noglobal)
     
     local process = {}
     local parrentEnv = (acG or sandbox())
     process._ENV = setmetatable({}, {__index = function(_,i)return parrentEnv[i]end})
-    process.rt = _K.coroutine.create(load(tfn,nil,nil,process._ENV))
-    
+    process.rt = coroutine.create(load(tfn,"="..name or "process",nil,process._ENV))
+    process.name = name or "!noname"
+    process.globalSignals = not noglobal
     local pid = #kmem.proc+1
     kmem.proc[pid] = process
     
     return pid
     
 end
+---------THREADING UTILS
+
+function posix.ps()
+    
+    local res = {}
+    
+    for pid, p in pairs(kmem.proc) do
+        res[#res + 1] = {
+            pid = pid,
+            name = p.name
+        }
+    end
+    
+    return res
+end
+
+function posix.signal(pid, ...)
+    if not kmem.processSignals[pid] then kmem.processSignals[pid] = {} end
+    kmem.processSignals[pid][#kmem.processSignals[pid]+1] = {...}
+end
+
+---------PREINIT
 
 local function bootInit()
     local handle, reason = rom.open("/lib/modules/init.lua")
@@ -421,7 +485,7 @@ end
 
 bootInit()
 
--------------
+---------TASKER
 
 local deadln = math.huge
 
@@ -429,29 +493,31 @@ do
     status("Begin MT mode")
     computer.pushSignal("boot")
     while true do
-        --status("[Kdbg]SigTO:"..tostring(deadln - computer.uptime()))
-        local sig = {computer.pullSignal(deadln - computer.uptime())}
+        local dl = deadln - computer.uptime()
+        if dl > 10 then dl=10 end
+        local sig = {computer.pullSignal(dl)}
         deadln = math.huge
         
-        for k,process in pairs(kmem.proc) do
-            --status("                         S:",table.unpack(sig))
-            acG = process._ENV
-            local res 
-            repeat
-                res = {_K.coroutine.resume(process.rt, table.unpack(sig))}
-            until res[1] and not (res[2]==true)
-            acG = nil
-            --status("[Kdbg]ThPT:"..tostring(res[2]))
-            if res[1] and type(res[2]) == "number" then
-                deadln = math.min(deadln, res[2] + computer.uptime())
+        for k,process in pairs(kmem.proc) do --process global signals
+            if process.globalSignals then
+                --status("                         S:",table.unpack(sig))
+                acG = process._ENV
+                local res 
+                repeat
+                    res = {coroutine.resume(process.rt, table.unpack(sig))}
+                    --status("[Kdbg]ThRESM:",table.unpack(res))
+                until not res[1] or res[2] --res 2 means user yield
+                acG = nil
+                --status("[Kdbg]ThPT:"..tostring(res[3]))
+                if res[1] and type(res[3]) == "number" then
+                    deadln = math.min(deadln, res[3] + computer.uptime())
+                end
+                
+                --status(table.unpack(res))
             end
-            
-            --status(table.unpack(res))
         end
     end
     
 end
 
-
 _K.panic()
-

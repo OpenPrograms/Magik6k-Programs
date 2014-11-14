@@ -1,7 +1,22 @@
 do
   status("MT Mode begin")
-  _G._OSVERSION = "OpenOS 1.2(p6 kernel/MT)"
+  _G._OSVERSION = "OpenOS 1.4(p6 kernel/MT)"
   
+  local component = component
+  local computer = computer
+  local unicode = unicode
+  
+  -- Runlevel information.
+  local runlevel, shutdown = "S", computer.shutdown
+  computer.runlevel = function() return runlevel end
+  computer.shutdown = function(reboot)
+    runlevel = reboot and 6 or 0
+    if os.sleep then
+      computer.pushSignal("shutdown")
+      os.sleep(0.1) -- Allow shutdown processing.
+    end
+    shutdown(reboot)
+  end
   
   local loadfile = function(file)
     status("> " .. file.. (acG and(" -E "..tostring(acG))or("")))
@@ -34,9 +49,6 @@ do
       error(reason)
     end
   end
-
-
-  
   
   status("Initializing package management...")
 
@@ -70,18 +82,14 @@ do
     -- Inject the package and io modules into the global namespace, as in Lua.
     _G.package = package
     _G.io = require("io")
+    
   end
-  
   
   status("Initializing file system...")
 
   -- Mount the ROM and temporary file systems to allow working on the file
   -- system module from this point on.
   local filesystem = require("filesystem")
-  local computer = require("computer")
-  local component = require("component")
-  _G.io = require("io")
-  
   filesystem.mount(computer.getBootAddress(), "/")
 
   status("Running boot scripts...")
@@ -101,44 +109,56 @@ do
 
   -- Initialize process module.
   require("process").install("/init.lua", "init")
-
+  
   status("Initializing components...")
-
+  
+  local primaries = {}
   for c, t in component.list() do
+    local s = component.slot(c)
+    if not primaries[t] or (s >= 0 and s < primaries[t].slot) then
+      primaries[t] = {address=c, slot=s}
+    end
     computer.pushSignal("component_added", c, t)
+  end
+  for t, c in pairs(primaries) do
+    component.setPrimary(t, c.address)
   end
   os.sleep(0.5) -- Allow signal processing by libraries.
   computer.pushSignal("init") -- so libs know components are initialized.
 
-  status("Starting shell...")
+  status("Initializing system...")
+  require("term").clear()
+  os.sleep(0.1) -- Allow init processing.
+  --status("Starting shell")
+  --computer.pushSiganl("start")
+  runlevel = 1
 end
 
-
 local function motd()
-    local f = io.open("/etc/motd")
-    if not f then
-        return
-    end
-    if f:read(2) == "#!" then
-        f:close()
-        os.execute("/etc/motd")
-    else
-        f:seek("set", 0)
-        print(f:read("*a"))
-        f:close()
-    end
+  local f = io.open("/etc/motd")
+  if not f then
+    return
+  end
+  if f:read(2) == "#!" then
+    f:close()
+    os.execute("/etc/motd")
+  else
+    f:seek("set", 0)
+    print(f:read("*a"))
+    f:close()
+  end
 end
 
 while true do
-    require("term").clear()
-    motd()
-    local result, reason = os.execute(os.getenv("SHELL"))
-    if not result then
-        io.stderr:write((tostring(reason) or "unknown error") .. "\n")
-        print("Press any key to continue.")
-        os.sleep(0.5)
-        require("event").pull("key")
-    end
+  motd()
+  local result, reason = os.execute(os.getenv("SHELL"))
+  if not result then
+    io.stderr:write((tostring(reason) or "unknown error") .. "\n")
+    print("Press any key to continue.")
+    os.sleep(0.5)
+    require("event").pull("key")
+  end
+  require("term").clear()
 end
 
 
