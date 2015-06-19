@@ -1,4 +1,5 @@
 local argv = {...}
+local options
 local loglevel = 1
 
 local ocData = {
@@ -49,7 +50,8 @@ ocBackend = {
         ocData.term = require("term")
         ocData.shell = require("shell")
         ocData.wget = loadfile("/bin/wget.lua")
-        local _, options = ocData.shell.parse(table.unpack(argv))
+        local a
+        a, options = ocData.shell.parse(table.unpack(argv))
         if options.root then
             core.rootDir = options.root
             core.log(1, "OC ","Using custom root directory: "..core.rootDir)
@@ -116,6 +118,8 @@ ocBackend = {
     end,
     
     ----FILESYSTEM
+    concat = function(...)return ocData.fs.concat(...)end,
+    
     readConfig = function()
         if ocData.fs.exists(core.rootDir..ocData.configDir) then
             local f = ocData.io.open(core.rootDir..ocData.configDir, "r")
@@ -127,9 +131,9 @@ ocBackend = {
             return core.newConfig()
         end
     end,
-    readBase = function()
-        if ocData.fs.exists(core.rootDir..ocData.baseDir) then
-            local f = ocData.io.open(core.rootDir..ocData.baseDir, "r")
+    readBase = function(root)
+        if ocData.fs.exists((root or core.rootDir)..ocData.baseDir) then
+            local f = ocData.io.open((root or core.rootDir)..ocData.baseDir, "r")
             local db = ocData.serialization.unserialize(f:read("*all"))
             f:close()
             return db
@@ -158,14 +162,14 @@ ocBackend = {
         end
     end,
     
-    fileExists = function(file)
-        return ocData.filesystem.exists(core.rootDir..file)
+    fileExists = function(file, root)
+        return ocData.filesystem.exists((root or core.rootDir)..file)
     end,
     
-    copyFile = function(from, to)
-        core.log(0, "OC", "COPY "..core.rootDir..from.." -> "..core.rootDir..to)
+    copyFile = function(from, to, fromRoot)
+        core.log(0, "OC", "COPY "..(fromRoot or core.rootDir)..from.." -> "..core.rootDir..to)
         ocBackend.ensureParrentDirectory(to)
-        return ocData.filesystem.copy(core.rootDir..from, core.rootDir..to)
+        return ocData.filesystem.copy((fromRoot or core.rootDir)..from, core.rootDir..to)
     end,
     
     removeFile = function(file)
@@ -200,12 +204,11 @@ ocBackend = {
 
     prompt = function(message)
         io.write(message)
-        local p = ocData.term.read(nil,nil,nil,nil,"^[Yn]$")
-        if p:sub(1,1) ~= "Y" then
+        local p = ocData.term.read(nil,nil,nil,nil,"^[Yyn]$")
+        if p:sub(1,1):upper() ~= "Y" then
             error("User stopped")
         end
     end
-
 }
 
 local mptFrontend
@@ -219,10 +222,6 @@ mptFrontend = {
             return true, pack.dependencies, pack
         end
     end,
-    getSpecialActions = function()end,
-    searchPackage = function()end,
-    installPackage = function()end,
-    upgrade = function()end,
     
     getFilesIntoCache = function(data)
         for _, file in ipairs(data.files) do
@@ -261,25 +260,63 @@ mptFrontend = {
             end
             return res
         end
-    end
+    end,
+    
+    isOffline = false
 }
 
 local oppmFrontend = {
     name = "OPPM",
     findPackage = function(name)end,
-    getSpecialActions = function() return {} end,
-    searchPackage = function()end,
-    installPackage = function()end,
     checkUpdate = function()
         --https://github.com/OpenPrograms/Magik6k-Programs.git/info/refs?service=git-upload-pack
         --https://github.com/schacon/igithub/blob/master/http-protocol.txt
     end,
-    upgrade = function()end,
-    action = function()end
+    action = function()end,
+    isOffline = false
+}
+
+
+
+local mirrorFrontend
+mirrorFrontend = {
+    name = "Mirror",
+    start = function()
+        if options.mirror then
+            mirrorFrontend.base = backend.readBase(options.mirror)
+        end
+    end,
+    findPackage = function(name)
+        if mirrorFrontend.base and mirrorFrontend.base.installed[name] then
+            return true, mirrorFrontend.base.installed[name].deps, mirrorFrontend.base.installed[name].data
+        end
+    end,
+    getFilesIntoCache = function(data)
+        for _, file in ipairs(data.files) do
+            if not backend.fileExists(config.cacheDir.."mpt/"..data.name.."/".. data.checksum ..file) then
+                --backend.getFile(config.frontend.mpt.api.."file/"..data.name..file, config.cacheDir.."mpt/"..data.name.."/".. data.checksum ..file)
+                backend.copyFile(file, config.cacheDir.."mpt/"..data.name.."/".. data.checksum ..file, options.mirror)
+            end
+        end
+        return data.files
+    end,
+    installFiles = function(data)
+        for _, file in ipairs(data.files) do
+            backend.copyFile(config.cacheDir.."mpt/"..data.name.."/".. data.checksum ..file, file)
+        end
+    end,
+    removePackage = function(package)
+        for _, file in ipairs(base.installed[package].data.files) do
+            backend.removeFile(file)
+        end
+    end,
+    checkUpdate = function()end,
+    action = function()end,
+    isOffline = true
 }
 
 backend = ocBackend
-frontends = {mptFrontend, oppmFrontend}
+frontends = {mptFrontend, oppmFrontend, mirrorFrontend}
 
 core = {
     rootDir = "/",
@@ -288,6 +325,16 @@ core = {
         backend.init()
         base = backend.readBase()
         config = backend.readConfig()
+        local usedFrontends = {}
+        for _, frontend in ipairs(frontends) do
+            if not options.offline or frontend.isOffline then
+                usedFrontends[#usedFrontends + 1] = frontend
+                if frontend.start then
+                    frontend.start()
+                end
+            end
+        end
+        frontends = usedFrontends
     end,
 
     finalize = function()
@@ -546,7 +593,10 @@ core = {
 core.log(1, "Main", "> Loading settings")
 core.init()
 
-backend.run()
+local state, reason = pcall(backend.run)
+if not state then
+    io.stderr:write(reason .. "\n")
+end
 
 core.log(1, "Main", "> Saving settings")
 core.finalize()
