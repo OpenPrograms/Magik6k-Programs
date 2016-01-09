@@ -39,6 +39,13 @@ local defaultStyle=nil
 --clipboard is global between guis and gui sessions, as long as you don't reboot.
 local clipboard=nil
 
+local s, gpuaddr, screen = pcall(term.getInfo)
+if not s then
+  print("use fallback gpu")
+  gpuaddr = component.gpu.address
+end
+print("gpu: " .. gpuaddr)
+
 local validElements = {
   ["*"]=true,
   gui=true,       --top gui container
@@ -72,10 +79,11 @@ local screen = {
       bodyX=1,bodyY=1,
       hidden=false,
       isHidden=function() return false end,
-      renderTarget=component.gpu
+      renderTarget=component.proxy(gpuaddr)
     }
 
-screen.width,screen.height=component.gpu.getResolution()
+print(screen.renderTarget.address)
+screen.width,screen.height=screen.renderTarget.getResolution()
 screen.bodyW,screen.bodyH=screen.width,screen.height
 
 --**********************
