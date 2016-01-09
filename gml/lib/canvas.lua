@@ -239,7 +239,12 @@ end
 
 
 function canvas.create(width,height,depth,parent)
-  parent=parent or component.gpu
+  local s, gpuaddr, screen = pcall(term.getInfo)
+  if not s then
+    gpuaddr = component.gpu.address
+  end
+  
+  parent=parent or component.proxy(gpuaddr)
   if width==nil then
     width,height=parent.getResolution()
   elseif height==nil then
