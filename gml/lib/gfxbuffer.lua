@@ -1,5 +1,7 @@
 local component=require("component")
 local unicode=require("unicode")
+local term=require("term")
+
 local len = unicode.len
 
 local buffer={VERSION="1.0"}

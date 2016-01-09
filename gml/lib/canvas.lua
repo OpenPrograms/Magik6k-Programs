@@ -9,6 +9,7 @@ parents, and do sorting and grouping to optimally draw those buffers up to their
 --]]
 local component=require("component")
 local colorutils=require("colorutils")
+local term=require("term")
 
 --copy these to file local, they're called a lot in performance-intensive loops
 local convColor_hto8=colorutils.convColor_hto8
@@ -243,7 +244,7 @@ function canvas.create(width,height,depth,parent)
   if not s then
     gpuaddr = component.gpu.address
   end
-  
+
   parent=parent or component.proxy(gpuaddr)
   if width==nil then
     width,height=parent.getResolution()
