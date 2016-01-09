@@ -38,6 +38,11 @@ local defaultStyle=nil
 --clipboard is global between guis and gui sessions, as long as you don't reboot.
 local clipboard=nil
 
+local s, gpuaddr, screenaddr = pcall(term.getInfo)
+if not s then
+  gpuaddr = component.gpu.address
+end
+
 local validElements = {
   ["*"]=true,
   gui=true,       --top gui container
@@ -66,7 +71,6 @@ local validDepths = {
   [8]=true,
 }
 
---[[
 local screen = {
       posX=1, posY=1,
       bodyX=1,bodyY=1,
@@ -77,7 +81,6 @@ local screen = {
 
 screen.width,screen.height=screen.renderTarget.getResolution()
 screen.bodyW,screen.bodyH=screen.width,screen.height
-]]
 
 --**********************
 --utility functions
@@ -1638,6 +1641,6 @@ end
 --**********************
 
 defaultStyle=gml.loadStyle("default")
---screen.style=defaultStyle
+screen.style=defaultStyle
 
 return gml
