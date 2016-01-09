@@ -801,7 +801,7 @@ local function runGui(gui)
     local e={event.pull()}
     if e[1]=="gui_close" then
       break
-    elseif e[1]=="touch" then
+    elseif e[1]=="touch" and (not screen or e[2] == screen) then
       --figure out what was touched!
       local tx, ty, button=e[3],e[4],e[5]
       if gui:contains(tx,ty) then
@@ -828,7 +828,7 @@ local function runGui(gui)
         lastClickTime=tickTime
         lastClickButton=button
       end
-    elseif e[1]=="drag" then
+    elseif e[1]=="drag" and (not screen or e[2] == screen) then
       --if we didn't click /on/ something to start this drag, we do nada
       if clickedOn then
         local tx,ty=e[3],e[4]
@@ -852,7 +852,7 @@ local function runGui(gui)
           clickedOn:onDrag(tx,ty)
         end
       end
-    elseif e[1]=="drop" then
+    elseif e[1]=="drop" and (not screen or e[2] == screen) then
       local tx,ty=e[3],e[4]
       tx=tx-gui.bodyX+1
       ty=ty-gui.bodyY+1
@@ -867,7 +867,7 @@ local function runGui(gui)
       draggingObj=nil
       dragging=false
 
-    elseif e[1]=="key_down" then
+    elseif e[1]=="key_down" and (not screen or e[2] == screen) then
       local char,code=e[3],e[4]
       --tab
       if code==15 and gui.focusElement then
