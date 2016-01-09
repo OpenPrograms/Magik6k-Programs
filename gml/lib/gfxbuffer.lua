@@ -220,7 +220,12 @@ function bufferMeta.flush(buffer)
 end
 
 function buffer.create(parent)
-  parent=parent or component.gpu
+  local s, gpuaddr, screen = pcall(term.getInfo)
+  if not s then
+    gpuaddr = component.gpu.address
+  end
+  
+  parent=parent or component.proxy(gpuaddr)
   local width,height=parent.getResolution()
 
   local newBuffer={
