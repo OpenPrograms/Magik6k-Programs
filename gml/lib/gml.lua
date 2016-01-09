@@ -26,7 +26,6 @@ local filesystem=require("filesystem")
 local keyboard=require("keyboard")
 local unicode=require("unicode")
 local gfxbuffer=require("gfxbuffer")
-local process = require("process")
 
 local len = unicode.len
 
@@ -109,7 +108,7 @@ function gml.loadStyle(name)
   local filepath
 
   --search for styles in working directory, running program directory, /lib /usr/lib. Just because.
-  local dirs={shell.getWorkingDirectory(),process.running():match("^(.*/).+$"), "/lib/", "/usr/lib/"}
+  local dirs={"/lib/", "/usr/lib/"}
   if dirs[1]~="/" then
     dirs[1]=dirs[1].."/"
   end
