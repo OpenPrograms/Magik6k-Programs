@@ -1,0 +1,201 @@
+/* default style for gml gui library */
+
+* {
+  fill-ch: " ";
+
+  border: false;
+  border-top: false;
+  border-bottom: false;
+  border-left: false;
+  border-right: false;
+
+  border-color-fg: 0xffffff;
+  border-color-bg: 0xb4b4b4;  
+  border-ch-top: U+2550;
+  border-ch-bottom: U+2550;
+  border-ch-left: U+2551;
+  border-ch-right: U+2551;
+  border-ch-topleft: U+2554;
+  border-ch-bottomleft: U+255a;
+  border-ch-topright: U+2557;
+  border-ch-bottomright: U+255d;
+
+}
+
+
+gui {
+  border: true;
+  border-top: true;
+  border-bottom: true;
+  border-left: true;
+  border-right: true;
+
+  fill-color-fg: 0xffffff;
+  fill-color-bg: 0xb4b4b4;
+  fill-ch: " ";
+  
+  border-color-fg: 0xffffff;
+  border-color-bg: 0xb4b4b4;  
+  border-ch-top: U+2550;
+  border-ch-bottom: U+2550;
+  border-ch-left: U+2551;
+  border-ch-right: U+2551;
+  border-ch-topleft: U+2554;
+  border-ch-bottomleft: U+255a;
+  border-ch-topright: U+2557;
+  border-ch-bottomright: U+255d;
+}
+
+label {
+  text-color: 0x000000;
+  text-background: 0xb4b4b4;
+}
+
+label.error {
+  text-color: 0xff0000;
+}
+
+label.error!1 {
+  text-color:0x000000;
+  text-background: 0xffffff
+}
+
+button {
+  text-color: 0xffffff;
+  text-background: 0x000080;
+  fill-color-fg: 0xb4b4b4;
+  fill-color-bg: 0x000080;
+  border: false;
+  border-left: false;
+  border-right: false;
+  border-top: false;
+  border-bottom: false;
+  border-color-bg: 0x000080;
+  border-color-fg: 0xb4b4b4;
+  border-ch-left: "[";
+  border-ch-right: "]";  
+}
+ 
+button:focus {
+  text-color: 0xffffff;
+  text-background: 0x0000ff;
+  fill-color-fg: 0xffffff;
+  fill-color-bg: 0x0000ff;
+  border-color-bg: 0x0000ff;
+  border-color-fg: 0xffffff;
+  border: true;
+  border-left: true;
+  border-right: true;
+}
+
+textfield, textbox {
+  selected-color: 0xffffff;
+  selected-background: 0x0000ff;
+  text-color: 0xffffff;
+  text-background: 0x5a5a5a;  
+}
+
+
+textbox:focus, textfield:focus {
+  text-color: 0xffffff;
+  text-background: 0x000000;  
+}
+
+
+scrollbar {
+  button-color-fg: 0xffffff;
+  button-color-bg: 0x0000ff;
+  button-ch-up: U+25b2;
+  button-ch-down: U+25bc;
+  button-ch-left: U+25c4;
+  button-ch-right: U+25ba;
+  grip-ch-v:	U+2261;
+  grip-ch-h: "|";
+  bar-ch:	U+2592;
+  bar-color-fg: 0xffffff;
+  bar-color-bg: 0x000080;
+  grip-color-fg: 0xffffff;
+  grip-color-bg: 0x000080;
+}
+
+listbox {
+  border:true;
+  border-top:true;
+  border-left:true;
+  border-bottom:true;
+  border-color-fg: 0xffffff;
+  border-color-bg: 0x000080;
+}
+
+listbox:focus {
+  border-color-fg: 0xffffff;
+  border-color-bg: 0x0000FF;
+  
+}
+
+label.listbox:selected {
+  text-color: 0xffffff;
+  text-background: 0x0000ff;
+
+}
+
+
+/*one-bit styles*/
+*!1 {
+  text-color:0xffffff;
+  text-background:0x000000;
+
+  border-color-fg: 0;
+  border-color-bg: 0xffffff;  
+
+  fill-color-fg: 0xffffff;
+  fill-color-bg: 0x000000;
+
+  button-color-fg: 0x000000;
+  button-color-bg: 0xffffff;
+  bar-color-fg: 0xffffff;
+  bar-color-bg: 0x000000;
+  grip-color-fg: 0x000000;
+  grip-color-bg: 0xffffff;
+  
+}
+
+listbox!1 {
+  border-color-fg: 0xffffff;
+  border-color-bg: 0x000000;  
+}
+listbox:focus!1 {
+  border-color-fg: 0x000000;
+  border-color-bg: 0xffffff;  
+}
+
+textfield!1 {
+  text-color: 0x000000;
+  text-background: 0xffffff;  
+}
+
+textfield:focus!1 {
+  selected-color: 0x0;
+  selected-background: 0xffffff;
+  text-color: 0xffffff;
+  text-background: 0x000000;  
+}
+
+button!1 {
+  text-color:0x000000;
+  text-background:0xffffff;
+
+  border-color-fg: 0;
+  border-color-bg: 0xffffff;  
+
+  fill-color-fg: 0x000000;
+  fill-color-bg: 0xffffff;  
+}
+
+label.listbox:selected!1 {
+  text-color: 0x000000;
+  text-background: 0xffffff;
+
+}
+
+
