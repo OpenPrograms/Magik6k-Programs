@@ -38,13 +38,6 @@ local defaultStyle=nil
 --clipboard is global between guis and gui sessions, as long as you don't reboot.
 local clipboard=nil
 
-local s, gpuaddr, screenaddr = pcall(term.getInfo)
-if not s then
-  print("use fallback gpu")
-  gpuaddr = component.gpu.address
-end
-print("gpu: " .. gpuaddr)
-
 local validElements = {
   ["*"]=true,
   gui=true,       --top gui container
@@ -73,6 +66,7 @@ local validDepths = {
   [8]=true,
 }
 
+--[[
 local screen = {
       posX=1, posY=1,
       bodyX=1,bodyY=1,
@@ -81,9 +75,9 @@ local screen = {
       renderTarget=component.proxy(gpuaddr)
     }
 
-print(screen.renderTarget.address)
 screen.width,screen.height=screen.renderTarget.getResolution()
 screen.bodyW,screen.bodyH=screen.width,screen.height
+]]
 
 --**********************
 --utility functions
@@ -796,10 +790,12 @@ local function runGui(gui)
   local lastClickTime, lastClickPos, lastClickButton, dragButton, dragging=0,{0,0},nil,nil,false
   local draggingObj=nil
 
+  local _, _, screenaddr = pcall(term.getInfo)
+
   while true do
     gui.renderTarget:flush()
     local e={event.pull()}
-    if e[1]=="gui_close" then
+    if e[1]=="gui_close" and (not screenaddr or e[2] == screenaddr) then
       break
     elseif e[1]=="touch" and (not screenaddr or e[2] == screenaddr) then
       --figure out what was touched!
@@ -1551,6 +1547,7 @@ end
 
 
 function gml.create(x,y,width,height,renderTarget)
+  local r, gpu, screenaddr = pcall(term.getInfo)
 
   local newGui=compositeBase(screen,x,y,width,height,"gui",false)
   newGui.handlers={}
@@ -1559,7 +1556,7 @@ function gml.create(x,y,width,height,renderTarget)
 
   local running=false
   function newGui.close()
-    computer.pushSignal("gui_close")
+    computer.pushSignal("gui_close", screenaddr)
   end
 
   function newGui.addComponent(obj,component)
