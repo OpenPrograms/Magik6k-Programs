@@ -7,6 +7,10 @@ Shared by gfxbuffer and canvas, and possibly gml later?
 --]]
 local colorutils = {VERSION="1.0"}
 
+local function round(x)
+  return math.floor(x+.5)
+end
+
 function colorutils.convColor_hto8(hex)
   local r,g,b=bit32.rshift(hex,16),bit32.rshift(hex,8)%256,hex%256
   r=round(r*7/255)

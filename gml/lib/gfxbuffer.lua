@@ -7,6 +7,9 @@ local bufferMeta={}
 
 local debugPrint=function() end
 
+local function round(x)
+  return math.floor(x+.5)
+end
 
 local function convColor_8toh(hex)
   local r,g,b=bit32.rshift(hex,16),bit32.rshift(hex,8)%256,hex%256
