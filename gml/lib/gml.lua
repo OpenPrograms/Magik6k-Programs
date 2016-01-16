@@ -1133,12 +1133,16 @@ local function addTextField(gui,x,y,width,text)
     end
   end
 
+  tf.charHandler=function(tfclear,char)
+    tf:insertText(char)
+    dirty=true
+  end
+
   tf.keyHandler=function(tfclear,char,code)
       local screenX,screenY=tf:getScreenPosition()
       local dirty=false
       if not keyboard.isControl(char) then
-        tf:insertText(unicode.char(char))
-        dirty=true
+        tf:charHandler(io.read(1))
       elseif code==28 and tf.tabNext then
         gui:changeFocusTo(tf.tabNext)
       elseif code==keyboard.keys.left then
