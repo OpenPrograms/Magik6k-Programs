@@ -740,6 +740,16 @@ local function contains(element,x,y)
   return x>=ex and x<=ex+ew-1 and y>=ey and y<=ey+eh-1
 end
 
+local function screenKeyboard(kbd, screen)
+  local kbds = components.invoke(screen, "getKeyboards")
+  for _, k in ipairs(kbds) do
+    if k == kbd then
+      return true
+    end
+  end
+  return false
+end
+
 local function runGui(gui)
   gui.running=true
   --draw gui background, preserving underlying screen
@@ -866,7 +876,7 @@ local function runGui(gui)
       draggingObj=nil
       dragging=false
 
-    elseif e[1]=="key_down" and (not screenaddr or e[2] == screenaddr) then
+    elseif e[1]=="key_down" and (not screenaddr or screenKeyboard(e[2], screenaddr)) then
       local char,code=e[3],e[4]
       --tab
       if code==15 and gui.focusElement then
