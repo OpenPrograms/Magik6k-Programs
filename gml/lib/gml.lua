@@ -741,7 +741,7 @@ local function contains(element,x,y)
 end
 
 local function screenKeyboard(kbd, screen)
-  local kbds = components.invoke(screen, "getKeyboards")
+  local kbds = component.invoke(screen, "getKeyboards")
   for _, k in ipairs(kbds) do
     if k == kbd then
       return true
