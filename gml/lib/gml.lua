@@ -740,14 +740,13 @@ local function contains(element,x,y)
   return x>=ex and x<=ex+ew-1 and y>=ey and y<=ey+eh-1
 end
 
-local function screenKeyboard(kbd, screen)
+local function findKeyboards(screen)
   local kbds = component.invoke(screen, "getKeyboards")
+  local keyboards = {}
   for _, k in ipairs(kbds) do
-    if k == kbd then
-      return true
-    end
+      keyboards[k] = true
   end
-  return false
+  return keyboards
 end
 
 local function runGui(gui)
@@ -804,7 +803,7 @@ local function runGui(gui)
   local draggingObj=nil
 
   local _, _, screenaddr = pcall(term.getInfo)
-
+  local keyboards = findKeyboards(screenaddr)
   while true do
     gui.renderTarget:flush()
     local e={event.pull()}
@@ -876,7 +875,7 @@ local function runGui(gui)
       draggingObj=nil
       dragging=false
 
-    elseif e[1]=="key_down" and (not screenaddr or screenKeyboard(e[2], screenaddr)) then
+    elseif e[1]=="key_down" and (not screenaddr or keyboards[e[2]]) then
       local char,code=e[3],e[4]
       --tab
       if code==15 and gui.focusElement then
