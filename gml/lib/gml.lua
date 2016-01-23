@@ -915,6 +915,9 @@ local function runGui(gui)
         gui.focusElement.onKey(char,code)
       end
     end
+	if io.input().remaining and io.input().remaining()~=0 then
+		io.read(io.input().remaining())
+	end
   end
 
   running=false
