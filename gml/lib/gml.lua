@@ -1510,7 +1510,7 @@ local function addListBox(gui,x,y,width,height,list)
   lb.scrollBar.class="listbox"
   lb.scrollBar.listBox=lb
 
-  lb.scrollBar.posY=1
+  lb.scrollBar.posY=lb.posY-lb.bodyY+1
   lb.scrollBar.height=lb.height
   lb.scrollBar.length=lb.height
 
