@@ -289,7 +289,13 @@ mptFrontend = {
         end
         local updateResp = backend.getText(config.frontend.mpt.api.."update", toCheck)
         if updateResp then
-            local updateList = load("return "..updateResp)() or {}
+            local upd, err = load("return "..updateResp)
+            if not upd then
+                print("Update error: " .. tostring(err))
+                print("Data: " .. tostring(updateResp))
+                os.exit(1)
+            end
+            local updateList = upd() or {}
             local res = {}
             for _, entry in ipairs(updateList) do
                 res[entry.package] = {checksum = entry.checksum}
@@ -390,7 +396,7 @@ oppmFrontend = {
                 if packages then
                     for name, package in pairs(packages) do
                         local metadata = {
-                            files = expandOppmFiles(package.files),
+                            files = expandOppmFiles(package.files or {}),
                             dependencies = keys(package.dependencies or {}),
                             repo = repoid,
                             version = package.version
